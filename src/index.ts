@@ -6,8 +6,8 @@ import { ApiLayer } from "./api-layer";
 export interface Env {
 	OKX_BASE_URL: string;
 	SUPABASE_URL: string;
-	SUPABASE_ANON_KEY: string;
-	TOP_N: string; // Worker env variables are typically strings
+	SUPABASE_SERVICE_ROLE_KEY: string; // 使用 service_role 以绕过 RLS
+	TOP_N: string;
 	MIN_CHANGE_PERCENT: string;
 	TIMEFRAMES: string;
 	ROLLING_WINDOW: string;
@@ -16,7 +16,7 @@ export interface Env {
 export default {
 	async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
 		const url = new URL(request.url);
-		const storage = new StorageLayer(env.SUPABASE_URL, env.SUPABASE_ANON_KEY);
+		const storage = new StorageLayer(env.SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY);
 		const api = new ApiLayer((storage as any).client); // Accessing the private client for API queries
 
 		try {

@@ -12,7 +12,7 @@
 | :--- | :--- | :--- |
 | **敏感数据 (Secrets)** | | |
 | `SUPABASE_URL` | **Secret** | Supabase 项目地址 |
-| `SUPABASE_ANON_KEY` | **Secret** | Supabase 匿名 Key (绝对不能泄露) |
+| `SUPABASE_SERVICE_ROLE_KEY` | **Secret** | Supabase **service_role** Key (用于绕过 RLS 权限) |
 | **普通变量 (Variables)** | | |
 | `OKX_BASE_URL` | Variable | OKX API 地址 (默认: https://www.okx.com) |
 | `TOP_N` | Variable | 扫描涨幅榜前多少名 (默认: 50) |
