@@ -1,0 +1,20 @@
+{
+  "name": "short-gainers-scanner",
+  "version": "1.0.0",
+  "description": "A crypto scanner for shorting candidates using Cloudflare Workers and Supabase",
+  "main": "src/index.ts",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "cf-typegen": "wrangler types"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20240405.0",
+    "typescript": "^5.4.4",
+    "wrangler": "^3.47.0"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.42.0",
+    "zod": "^3.22.4"
+  }
+}

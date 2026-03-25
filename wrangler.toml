@@ -1,0 +1,15 @@
+name = "short-gainers-scanner"
+main = "src/index.ts"
+compatibility_date = "2024-04-05"
+
+[vars]
+OKX_BASE_URL = "https://www.okx.com"
+TOP_N = 50
+ROLLING_WINDOW = 50
+TRACK_HISTORY = true
+MIN_CHANGE_PERCENT = 3
+TIMEFRAMES = "5m,15m,1h,4h,1d"
+
+# [env.production.vars]
+# SUPABASE_URL = ""
+# SUPABASE_ANON_KEY = ""
