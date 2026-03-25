@@ -56,11 +56,14 @@ graph TD
 ## ⚙️ 环境配置
 
 在 Worker 的 `env` 中配置：
-- `OKX_BASE_URL`
-- `SUPABASE_URL`
-- `SUPABASE_ANON_KEY`
-- `FETCH_LIMIT`
-- `ROLLING_WINDOW`
+- `OKX_BASE_URL=https://www.okx.com`
+- `SUPABASE_URL=https://your-project.supabase.co`
+- `SUPABASE_ANON_KEY=your-anon-key`
+- `TOP_N=50`
+- `ROLLING_WINDOW=50`
+- `TRACK_HISTORY=true`
+- `MIN_CHANGE_PERCENT=3`
+- `TIMEFRAMES=5m,15m,1h,4h,1d`
 
 ---
 
