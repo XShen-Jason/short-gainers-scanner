@@ -40,23 +40,38 @@ export default {
 				const minChange = parseFloat(env.MIN_CHANGE_PERCENT) || 3;
 				const timeframes = (env.TIMEFRAMES || "5m,15m,1h,4h,1d").split(",");
 				const windowSize = parseInt(env.ROLLING_WINDOW) || 50;
+				const trackingHours = parseInt((env as any).TRACKING_DURATION_HOURS) || 24;
 
-				// 抓取涨幅榜
+				// 1. 获取最新涨幅榜
 				const tickers = await fetcher.fetchTopGainers(topN, minChange);
+				
+				// 2. 标记这些币为活跃 (并更新行情)
 				await storage.upsertSymbols(tickers);
 				await storage.saveSnapshots(tickers);
 
-				// 抓取 K 线
-				const symbols = tickers.map((t) => t.symbol);
-				const rawKlines = await fetcher.fetchBatchKlines(symbols, timeframes, 100);
+				// 3. 获取所有“正在追踪中”的币种 (包括那些已经跌下涨幅榜但还在设定窗口内的)
+				const activeSymbols = await storage.getActiveSymbols(trackingHours);
+				
+				// 合并去重
+				const symbolsToFetch = Array.from(new Set([...tickers.map(t => t.symbol), ...activeSymbols]));
 
-				// 计算指标
+				// 4. 批量抓取 K 线
+				const rawKlines = await fetcher.fetchBatchKlines(symbolsToFetch, timeframes, 100);
+
+				// 5. 计算指标
 				const processedKlines = DataProcessor.processBatch(rawKlines, windowSize);
 
-				// 存储 K 线
+				// 6. 存储 K 线
 				await storage.saveKlines(processedKlines);
 
-				return ApiLayer.formatResponse({ message: "Fetch and process completed", count: processedKlines.length });
+				// 7. 清理过期追踪
+				await storage.deactivateStaleSymbols(trackingHours);
+
+				return ApiLayer.formatResponse({ 
+					message: "Tracking task completed", 
+					gainers_count: tickers.length,
+					total_tracked_count: symbolsToFetch.length 
+				});
 			}
 
 			// 2. 获取涨幅榜数据

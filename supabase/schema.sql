@@ -13,6 +13,7 @@ CREATE TABLE IF NOT EXISTS public.symbols (
     high_24h NUMERIC,                     -- 24小时最高价
     low_24h NUMERIC,                      -- 24小时最低价
     volume_24h NUMERIC,                   -- 24小时成交量
+    first_tracked_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(), -- 首次开始追踪时间
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 

@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Short Gainers Scanner - 可视化看板</title>
+    <script src="https://unpkg.com/lightweight-charts/dist/lightweight-charts.standalone.production.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #0d1117;
+            --sidebar-color: #161b22;
+            --accent-color: #58a6ff;
+            --text-color: #c9d1d9;
+            --border-color: #30363d;
+            --success-color: #238636;
+            --danger-color: #da3633;
+        }
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+        /* Sidebar */
+        .sidebar {
+            width: 250px;
+            background-color: var(--sidebar-color);
+            border-right: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+        }
+        .sidebar h2 {
+            font-size: 1.2rem;
+            margin-bottom: 20px;
+            color: #fff;
+        }
+        .symbol-list {
+            flex: 1;
+            overflow-y: auto;
+            margin-top: 10px;
+        }
+        .symbol-item {
+            padding: 10px 15px;
+            cursor: pointer;
+            border-radius: 6px;
+            margin-bottom: 5px;
+            transition: all 0.2s;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .symbol-item:hover {
+            background-color: #21262d;
+        }
+        .symbol-item.active {
+            background-color: #1f6feb;
+            color: #fff;
+        }
+        .symbol-item .change {
+            font-size: 0.8rem;
+        }
+        /* Main Content */
+        .main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+            gap: 20px;
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .controls {
+            display: flex;
+            gap: 10px;
+        }
+        select, button {
+            background-color: #21262d;
+            border: 1px solid var(--border-color);
+            color: var(--text-color);
+            padding: 8px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #30363d;
+        }
+        #chart-container {
+            flex: 1;
+            background-color: var(--sidebar-color);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            position: relative;
+        }
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 20px;
+        }
+        .stat-card {
+            background-color: var(--sidebar-color);
+            padding: 15px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+        }
+        .stat-card label {
+            font-size: 0.75rem;
+            color: #8b949e;
+        }
+        .stat-card .value {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-top: 5px;
+        }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-thumb { background: #30363d; border-radius: 10px; }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <h2>正在追踪</h2>
+        <div class="symbol-list" id="symbol-list">
+            <!-- 动态生成 -->
+        </div>
+        <button onclick="triggerUpdate()" style="margin-top: 20px; background-color: var(--success-color); color: #fff;">手动刷新抓取</button>
+    </div>
+
+    <div class="main">
+        <div class="header">
+            <h1 id="current-title">请选择交易对</h1>
+            <div class="controls">
+                <select id="timeframe-select" onchange="loadChart()">
+                    <option value="5m">5m</option>
+                    <option value="15m" selected>15m</option>
+                    <option value="1h">1h</option>
+                    <option value="4h">4h</option>
+                    <option value="1d">1d</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="stats" id="stats-panel" style="visibility: hidden;">
+            <div class="stat-card">
+                <label>最新价格</label>
+                <div class="value" id="stat-price">-</div>
+            </div>
+            <div class="stat-card">
+                <label>24h 涨幅</label>
+                <div class="value" id="stat-change">-</div>
+            </div>
+            <div class="stat-card">
+                <label>滚动最高</label>
+                <div class="value" id="stat-high">-</div>
+            </div>
+            <div class="stat-card">
+                <label>滚动最低</label>
+                <div class="value" id="stat-low">-</div>
+            </div>
+        </div>
+
+        <div id="chart-container"></div>
+    </div>
+
+    <script>
+        let currentSymbol = '';
+        let chart = null;
+        let candleSeries = null;
+        let highSeries = null;
+        let lowSeries = null;
+
+        async function init() {
+            initChart();
+            await fetchSymbols();
+            if (currentSymbol) loadChart();
+            
+            // 每 30 秒刷新一次列表
+            setInterval(fetchSymbols, 30000);
+        }
+
+        async function fetchSymbols() {
+            const res = await fetch('/api/gainers');
+            const data = await res.json();
+            const list = document.getElementById('symbol-list');
+            const currentList = Array.from(list.children).map(i => i.dataset.symbol);
+            
+            list.innerHTML = '';
+            data.forEach(item => {
+                const div = document.createElement('div');
+                div.className = `symbol-item ${item.symbol === currentSymbol ? 'active' : ''}`;
+                div.dataset.symbol = item.symbol;
+                div.onclick = () => selectSymbol(item);
+                
+                const color = item.change_24h >= 0 ? 'var(--success-color)' : 'var(--danger-color)';
+                div.innerHTML = `
+                    <span>${item.symbol}</span>
+                    <span class="change" style="color: ${color}">${item.change_24h.toFixed(2)}%</span>
+                `;
+                list.appendChild(div);
+            });
+
+            if (!currentSymbol && data.length > 0) {
+                selectSymbol(data[0]);
+            }
+        }
+
+        function selectSymbol(item) {
+            currentSymbol = item.symbol;
+            document.getElementById('current-title').innerText = currentSymbol;
+            document.querySelectorAll('.symbol-item').forEach(i => i.classList.remove('active'));
+            document.querySelector(`[data-symbol="${currentSymbol}"]`)?.classList.add('active');
+            
+            document.getElementById('stats-panel').style.visibility = 'visible';
+            document.getElementById('stat-price').innerText = item.last_price;
+            document.getElementById('stat-change').innerText = item.change_24h.toFixed(2) + '%';
+            document.getElementById('stat-change').style.color = item.change_24h >= 0 ? 'var(--success-color)' : 'var(--danger-color)';
+            
+            loadChart();
+        }
+
+        function initChart() {
+            const container = document.getElementById('chart-container');
+            chart = LightweightCharts.createChart(container, {
+                layout: { backgroundColor: '#161b22', textColor: '#d1d4dc' },
+                grid: { vertLines: { color: '#30363d' }, horzLines: { color: '#30363d' } },
+                crosshair: { mode: LightweightCharts.CrosshairMode.Normal },
+                timeScale: { timeVisible: true, secondsVisible: false }
+            });
+            candleSeries = chart.addCandlestickSeries();
+            highSeries = chart.addLineSeries({ color: 'rgba(35, 134, 54, 0.5)', lineWidth: 1, lineStyle: 2 });
+            lowSeries = chart.addLineSeries({ color: 'rgba(218, 54, 51, 0.5)', lineWidth: 1, lineStyle: 2 });
+
+            new ResizeObserver(entries => {
+                if (entries.length === 0 || !entries[0].contentRect) return;
+                const { width, height } = entries[0].contentRect;
+                chart.applyOptions({ width, height });
+            }).observe(container);
+        }
+
+        async function loadChart() {
+            if (!currentSymbol) return;
+            const timeframe = document.getElementById('timeframe-select').value;
+            const res = await fetch(`/api/klines?symbol=${currentSymbol}&timeframe=${timeframe}`);
+            const data = await res.json();
+
+            if (data.length === 0) return;
+
+            const candles = data.map(d => ({
+                time: d.open_time / 1000,
+                open: parseFloat(d.open_price),
+                high: parseFloat(d.high_price),
+                low: parseFloat(d.low_price),
+                close: parseFloat(d.close_price)
+            }));
+
+            const highs = data.map(d => ({
+                time: d.open_time / 1000,
+                value: parseFloat(d.rolling_high)
+            })).filter(h => h.value);
+
+            const lows = data.map(d => ({
+                time: d.open_time / 1000,
+                value: parseFloat(d.rolling_low)
+            })).filter(l => l.value);
+
+            candleSeries.setData(candles);
+            highSeries.setData(highs);
+            lowSeries.setData(lows);
+
+            const last = data[data.length - 1];
+            document.getElementById('stat-high').innerText = last.rolling_high || '-';
+            document.getElementById('stat-low').innerText = last.rolling_low || '-';
+            
+            chart.timeScale().fitContent();
+        }
+
+        async function triggerUpdate() {
+            await fetch('/api/trigger');
+            alert('更新任务已启动，请稍后刷新列表');
+        }
+
+        init();
+    </script>
+</body>
+</html>

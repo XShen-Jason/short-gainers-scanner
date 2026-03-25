@@ -20,16 +20,17 @@ export class DataFetcher {
             .map((t) => {
                 const last = parseFloat(t.last);
                 const open = parseFloat(t.open24h);
+                const change24h = open > 0 ? ((last - open) / open) * 100 : 0;
                 return {
                     symbol: t.instId,
                     lastPrice: last,
-                    change24h: ((last - open) / open) * 100,
+                    change24h: change24h,
                     high24h: parseFloat(t.high24h),
                     low24h: parseFloat(t.low24h),
                     volume24h: parseFloat(t.volCcy24h),
                 };
             })
-            .filter((t) => t.change24h >= minChange)
+            .filter((t) => t.change24h >= minChange && isFinite(t.change24h))
             .sort((a, b) => b.change24h - a.change24h)
             .slice(0, topN);
     }
