@@ -1,0 +1,22 @@
+{
+  "name": "short-gainers-scanner",
+  "version": "1.0.0",
+  "description": "A Cloudflare Worker for scanning Top Gainers on OKX and storing data in Supabase.",
+  "main": "src/index.ts",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@supabase/supabase-js": "^2.49.1"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20250224.0",
+    "typescript": "^5.8.2",
+    "wrangler": "^3.111.0"
+  }
+}
