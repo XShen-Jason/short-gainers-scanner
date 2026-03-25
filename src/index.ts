@@ -20,6 +20,19 @@ export default {
 		const api = new ApiLayer((storage as any).client); // Accessing the private client for API queries
 
 		try {
+			// 0. 根路径指引
+			if (url.pathname === "/" || url.pathname === "") {
+				return ApiLayer.formatResponse({
+					message: "Short Gainers Screener API is running",
+					usage: "Please use one of the follow endpoints",
+					endpoints: {
+						fetch_control: "/api/cron-fetch",
+						view_gainers: "/api/gainers",
+						view_klines: "/api/klines?symbol=BTC-USDT&timeframe=1h"
+					}
+				});
+			}
+
 			// 1. 触发数据抓取任务 (手动或通过定时触发器)
 			if (url.pathname === "/api/cron-fetch") {
 				const fetcher = new DataFetcher(env.OKX_BASE_URL);
